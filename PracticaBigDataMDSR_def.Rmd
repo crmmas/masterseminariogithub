@@ -1,0 +1,174 @@
+---
+title: "PracticasBigDataMDSR"
+author: "Cristina Román Moreno"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+#install.packages("mongolite")
+
+library(mongolite)
+
+```
+
+```{r cadena_conexion}
+cadena_conexion = 'mongodb+srv://user01:user01@cluster0.mcblc3z.mongodb.net/test'
+
+
+```
+
+```{r opciones_conexion}
+opciones_conexion = ssl_options(weak_cert_validation = T)
+
+```
+
+
+##Tarea 1
+
+
+
+```{r conexion a la bbdd}
+
+Inspection = mongo(collection="inspections", db="sample_training", url=cadena_conexion, options = opciones_conexion)
+```
+
+
+```{r verificación consulta Inspection}
+
+Inspection$count()
+
+```
+
+
+```{r visualizar una inspección}
+
+Inspection$iterate()$one()
+
+```
+
+
+
+
+##Tarea 2
+
+
+
+
+
+```{r}
+Inspection$aggregate('[
+  {"$addFields": {"date2": {"$year": {"$dateFromString": {"dateString": "$date"}}}}},
+
+  {"$match": {"$and": [{"date2": {"$in": [2015, 2016]}},{"result": "Fail"}]}},
+  {"$group": {"_id": "$date2","count": { "$sum": 1 }}}
+]')
+```
+
+
+##Tarea 3
+
+
+```{r}
+fallidos2015_2016 <- Inspection$aggregate('[
+  {"$addFields": {"date2": {"$year": {"$dateFromString": {"dateString": "$date"}}}}},
+
+  {"$match": {"$and": [{"date2": {"$in": [2015, 2016]}},{"result": "Fail"}]}},
+  {"$group": {"_id": "$date2","count": { "$sum": 1 }}}
+]')
+
+```
+
+
+```{r}
+library(dplyr)
+
+library(ggplot2)
+```
+
+
+```{r}
+df <- as.data.frame(fallidos2015_2016)
+df <- df %>%
+  rename( Año="_id")
+
+ggplot(df,aes(x=reorder(Año,-count),y= count))+
+geom_bar(stat="identity",color='blue',fill='#aaaaff')+geom_text(aes(label = count), color = "black") +xlab("Año")+ylab("fallido")
+```
+
+
+##Tarea 4
+
+```{r conexion a la bbdd Companies}
+
+ Companies= mongo(collection="companies",db="sample_training", url=cadena_conexion, options = opciones_conexion)
+```
+
+
+
+
+```{r verificación consulta Inspection Companies}
+
+Companies$count()
+
+```
+
+```{r visualizar una inspección Companies}
+
+Companies$iterate()$one()
+
+```
+
+
+
+```{r}
+
+Companies$aggregate('[
+  {"$match": {"$and": [{ "category_code": "advertising" },{ "founded_year": { "$gte": 2000 }}]}},
+  {"$group": {"_id": "$founded_year","count": { "$sum": 1 }}},
+  {"$sort": {"_id": 1}}
+]')
+
+```
+
+
+```{r}
+
+company<-Companies$aggregate('[
+  {"$match": {"$and": [{ "category_code": "advertising" },{ "founded_year": { "$gte": 2000 }}]}},
+  {"$group": {"_id": "$founded_year","count": { "$sum": 1 }}},
+  {"$sort": {"_id": 1}}
+]')
+
+```
+
+
+
+```{r}
+df <- as.data.frame(company)
+df <- df %>%
+  rename( Año_Fundacion ="_id")
+```
+
+
+ 
+ 
+```{r}
+
+library(ggplot2)
+
+ggplot(df, aes(x = Año_Fundacion, y = count)) +
+  geom_line(color = 'blue') +
+  geom_text(aes(label = count), color = "black") +
+  xlab("Año Fundación") +
+  ylab("Count")
+
+```
+ 
+ 
